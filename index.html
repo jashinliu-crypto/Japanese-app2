@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日语单词小卡片</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        header {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* 卡片主体区域 */
+        .card-container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 300px;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .card-container:active {
+             transform: scale(0.98);
+        }
+
+        /* 单词显示 */
+        .word-display {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            word-break: keep-all;
+        }
+
+        /* 答案区域 (罗马音和中文) */
+        .answer-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0; /* 默认隐藏 */
+            transition: opacity 0.3s ease;
+        }
+
+        .answer-section.show {
+            opacity: 1; /* 显示 */
+        }
+
+        .romaji {
+            font-size: 1.2rem;
+            color: #666;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .meaning {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+
+        /* 发音按钮 */
+        .speak-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #e1effe;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .speak-btn:active {
+             background: #d0e3fc;
+        }
+
+        /* 底部控制按钮 */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-outline {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        .tips {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<header>📅 日语每日一词</header>
+
+<main class="card-container" id="cardArea" onclick="toggleAnswer()">
+    <button class="speak-btn" onclick="event.stopPropagation(); speakCurrentWord()">🔊</button>
+    
+    <div class="word-display" id="wordText"></div>
+    
+    <div class="answer-section" id="answerArea">
+        <div class="romaji" id="romajiText"></div>
+        <div class="meaning" id="meaningText"></div>
+    </div>
+</main>
+
+<div class="tips">👆 点击卡片查看答案，点击喇叭发音</div>
+
+<div class="controls">
+    <button class="btn btn-outline" onclick="prevWord()">上一个</button>
+    <button class="btn btn-primary" onclick="nextWord()">下一个 (随机)</button>
+</div>
+
+<script>
+    // ===========================
+    // 1. 数据准备 (你可以随意添加更多单词)
+    // ===========================
+    const vocabularyList = [
+        { word: "こんにちは", romaji: "konnichiwa", meaning: "你好" },
+        { word: "ありがとう", romaji: "arigatou", meaning: "谢谢" },
+        { word: "さようなら", romaji: "sayounara", meaning: "再见" },
+        { word: "猫 (ねこ)", romaji: "neko", meaning: "猫" },
+        { word: "犬 (いぬ)", romaji: "inu", meaning: "狗" },
+        { word: "美味しい (おいしい)", romaji: "oishii", meaning: "好吃的" },
+        { word: "勉強 (べんきょう)", romaji: "benkyou", meaning: "学习" },
+        { word: "難しい (むずかしい)", romaji: "muzukashii", meaning: "困难的" },
+        { word: "明日 (あした)", romaji: "ashita", meaning: "明天" },
+        { word: "愛してる (あいしてる)", romaji: "aishiteru", meaning: "我爱你" }
+    ];
+
+    // ===========================
+    // 2. 状态管理
+    // ===========================
+    let currentIndex = 0; // 当前显示的单词索引
+    let isAnswerVisible = false; // 答案是否可见
+
+    // 获取 DOM 元素
+    const wordTextEl = document.getElementById('wordText');
+    const romajiTextEl = document.getElementById('romajiText');
+    const meaningTextEl = document.getElementById('meaningText');
+    const answerAreaEl = document.getElementById('answerArea');
+
+    // ===========================
+    // 3. 核心函数
+    // ===========================
+
+    // 初始化页面
+    function init() {
+        // 初始随机打乱一下顺序，让每次打开都不一样
+        shuffleArray(vocabularyList);
+        renderCard();
+    }
+
+    // 渲染卡片内容
+    function renderCard() {
+        const currentWordData = vocabularyList[currentIndex];
+        wordTextEl.textContent = currentWordData.word;
+        romajiTextEl.textContent = `[ ${currentWordData.romaji} ]`;
+        meaningTextEl.textContent = currentWordData.meaning;
+
+        // 重置答案为隐藏状态
+        isAnswerVisible = false;
+        answerAreaEl.classList.remove('show');
+    }
+
+    // 切换答案的显示/隐藏
+    function toggleAnswer() {
+        isAnswerVisible = !isAnswerVisible;
+        if (isAnswerVisible) {
+            answerAreaEl.classList.add('show');
+            // 自动发音 (可选，如果不喜欢自动发音可以注释掉下面这行)
+            // speakCurrentWord(); 
+        } else {
+            answerAreaEl.classList.remove('show');
+        }
+    }
+
+    // 下一个单词 (这里采用了随机模式，有助于记忆)
+    function nextWord() {
+        // 简单地随机取下一个，可能会重复，适合刷词
+        currentIndex = Math.floor(Math.random() * vocabularyList.length);
+        // 如果想要顺序播放，用下面这行代替上面那行：
+        // currentIndex = (currentIndex + 1) % vocabularyList.length; 
+        renderCard();
+    }
+
+    // 上一个单词
+    function prevWord() {
+        currentIndex = (currentIndex - 1 + vocabularyList.length) % vocabularyList.length;
+        renderCard();
+    }
+
+    // 发音功能 (使用浏览器内置的 SpeechSynthesis API)
+    function speakCurrentWord() {
+        const text = vocabularyList[currentIndex].word;
+        
+        // 检查浏览器是否支持
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            // 重要：设置语言为日语
+            utterance.lang = 'ja-JP'; 
+            // 可以调整语速 (0.1 - 10, 默认 1)
+            utterance.rate = 0.9; 
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert("抱歉，您的浏览器不支持文本转语音功能。请尝试使用 Chrome 或 Safari。");
+        }
+    }
+
+    // 工具函数：数组洗牌 (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // ===========================
+    // 4. 启动
+    // ===========================
+    // 页面加载完成后执行初始化
+    window.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html>
